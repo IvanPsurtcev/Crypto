@@ -18,7 +18,7 @@ contract BankDeposit {
     }
 
     modifier checkTime() {
-        require(now >= time[msg.sender] + stepTime, "Quick withdrawal request");
+        require(block.timestamp >= time[msg.sender] + stepTime, "Quick withdrawal request");
         _;
     }
 
@@ -35,8 +35,47 @@ contract BankDeposit {
             uint payout = payoutAmount();
             percentWithdraw[msg.sender] += payout;
             allPercentWithdraw[msg.sender] += payout;
-            msg.sender.transfer(payout);
+            payable(msg.sender).transfer(payout);
             emit Withdraw(msg.sender, payout);
         }
+    }
+
+    function deposit() public payable {
+        if (msg.value > 0) {
+            if (balance[msg.sender] > 0 && block.timestamp > time[msg.sender] + stepTime) {
+                collectPercent();
+                percentWithdraw[msg.sender] = 0;
+            }
+            balance[msg.sender] += msg.value;
+            time[msg.sender] = block.timestamp;
+            emit Invest(msg.sender, msg.value);
+        }
+    }
+
+    function percentRate() public view returns (uint256) {
+        if (balance[msg.sender] < 10 ether) {
+            return 5;
+        }
+        if (balance[msg.sender] >= 10 ether && balance[msg.sender] < 20 ether) {
+            return 7;
+        }
+        if (balance[msg.sender] >= 20 ether) {
+            return 9;
+        }
+    }
+    function payoutAmount() public view returns (uint256) {
+        uint percent = percentRate();
+        uint different = (block.timestamp - time[msg.sender]) / stepTime;
+        uint rate = (balance[msg.sender] / 100) * percent;
+        uint withdrawalAmount = (rate * different) - percentWithdraw[msg.sender];
+        return withdrawalAmount;
+    }
+
+    function returnDeposit() public {
+        uint withdrawalAmount = balance[msg.sender];
+        balance[msg.sender] = 0;
+        time[msg.sender] = 0;
+        percentWithdraw[msg.sender] = 0;
+        payable(msg.sender).transfer(withdrawalAmount);
     }
 }

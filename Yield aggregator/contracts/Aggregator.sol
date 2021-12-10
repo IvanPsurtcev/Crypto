@@ -50,3 +50,34 @@ interface AaveLendingPool {
     );
 }
 
+contract Aggregator {
+    using SafeMath for uint256;
+
+    // Variables
+    string public name = "Yield Aggregator";
+    address public owner;
+    address public locationOnFunds;
+    uint256 public amountDeposited;
+
+    DAI dai = DAI(0x6B175474E89094C44Da98b954EedeAC495271d0F);
+    cDAI cDai = cDAI(0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643);
+    aDAI aDai = aDAI(0x028171bCA77440897B824Ca71D1c56caC55b68A3);
+    AaveLendingPool aaveLendingPool =
+    AaveLendingPool(0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9);
+
+    // Events
+    event Deposit(address owner, uint256 amount, address depositTo);
+    event Withdraw(address owner, uint256 amount, address withdrawFrom);
+    event Rebalance(address owner, uint256 amount, address depositTo);
+
+    modifier onlyOwner() {
+        require(msg.sender == owner);
+        _;
+    }
+
+    constructor() public {
+        owner = msg.sender;
+    }
+
+    
+}

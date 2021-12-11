@@ -53,7 +53,7 @@ contract Aggregator {
     // Variables
     string public name = "Yield Aggregator";
     address public owner;
-    address public locationOnFunds;
+    address public locationOfFunds;
     uint256 public amountDeposited;
 
     DAI dai = DAI(0x6B175474E89094C44Da98b954EedeAC495271d0F);
@@ -76,5 +76,55 @@ contract Aggregator {
         owner = msg.sender;
     }
 
-    
+    function deposit(uint256 _amount, uint256 _compAPY, uint256 _aaveAPY) public onlyOwner {
+        require(_amount > 0);
+
+        // Rebalance in the case of a protocol with the higher rate after their initial deposit,
+        // is no longer the higher interest rate during this deposit...
+        if(amountDeposited > 0) {
+            rebalance(_compAPY, _aaveAPY);
+        }
+
+        dai.transferFrom(msg.sender, address(this), _amount);
+        amountDeposited += _amount;
+
+        // Compare interest rates
+        if(_compAPY > _aaveAPY) {
+            // Deposit into Compound
+            require(_depositToCompound(_amount) == 0);
+
+            // Update location
+            locationOfFunds = address(cDai);
+        } else {
+            // Deposit into Aave
+            _depositToAave(_amount);
+
+            // Update location
+            locationOfFunds = address(aaveLendingPool);
+        }
+
+        emit Deposit(msg.sender, _amount, locationOfFunds);
+    }
+
+    function withdraw() public onlyOwner {
+        require(amountDeposited > 0);
+
+        // Determine where the user funds are stored
+        if (locationOfFunds == address(cDai)) {
+            require(_withdrawFromCompound() == 0);
+        } else {
+            // Withdraw from Aave
+            _withdrawFromAave();
+        }
+
+        // Once we have the funds, transfer back to owner
+        uint256 balance = dai.balanceOf(address(this));
+        dai.transfer(msg.sender, balance);
+
+        emit Withdraw(msg.sender, amountDeposited, locationOfFunds);
+
+        // Reset user balance
+        amountDeposited = 0;
+    }
+
 }

@@ -1,7 +1,5 @@
 pragma solidity 0.8.4;
 
-import "openzeppelin-solidity/contracts/math/SafeMath.sol";
-
 // Interface for ERC20 DAI contract
 interface DAI {
     function approve(address, uint256) external returns (bool);
@@ -51,7 +49,6 @@ interface AaveLendingPool {
 }
 
 contract Aggregator {
-    using SafeMath for uint256;
 
     // Variables
     string public name = "Yield Aggregator";

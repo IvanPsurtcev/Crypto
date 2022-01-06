@@ -38,6 +38,35 @@ describe("Exchange", () => {
         });
     });
 
+    describe("removeLiquidity", async () => {
+       beforeEach(async () => {
+           await token.approve(exchange.address, toWei(300));
+           await exchange.addLiquidity(toWei(200), { value: toWei(100) });
+       });
+
+       it("removes some liquidity", async () => {
+           const provider = waffle.provider;
+           const userEtherBalanceBefore = await provider.getBalance(owner.address);
+           const userTokenBalanceBefore = await token.balanceOf(owner.address);
+
+           await exchange.removeLiquidity(toWei(25));
+
+           expect(await exchange.getReserve()).to.equal(toWei(150));
+           expect(await provider.getBalance(exchange.address)).to.equal(toWei(75));
+
+           const userEtherBalanceAfter = await provider.getBalance(owner.address);
+           const userTokenBalanceAfter = await token.balanceOf(owner.address);
+
+           await expect(
+              fromWei(userEtherBalanceAfter.sub(userEtherBalanceBefore))
+           ).to.equal("24.999919985065490888");
+
+           await expect(
+              fromWei(userTokenBalanceAfter.sub(userTokenBalanceBefore))
+           ).to.equal("50.0");
+       });
+    });
+
     describe("getPrice", async () => {
        it("return correct price", async () => {
           await token.approve(exchange.address, toWei(2000));

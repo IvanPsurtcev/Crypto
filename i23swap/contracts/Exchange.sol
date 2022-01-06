@@ -33,6 +33,16 @@ contract Exchange is ERC20 {
         }
     }
 
+    function removeLiquidity(uint256 _amount) public returns (uint256, uint256) {
+        require(_amount > 0, "invalid amount");
+        uint256 ethAmount = (address(this).balance * _amount) / totalSupply();
+        uint256 tokenAmount = (getReserve() * _amount) / totalSupply();
+        _burn(msg.sender, _amount);
+        payable(msg.sender).transfer(ethAmount);
+        IERC20(tokenAddress).transfer(msg.sender, tokenAmount);
+        return (ethAmount, tokenAmount);
+    }
+
     function getReserve() public view returns (uint256) {
         return IERC20(tokenAddress).balanceOf(address(this));
     }
@@ -42,9 +52,16 @@ contract Exchange is ERC20 {
         return (inputReserve * 1000) / outputReserve;
     }
 
-    function getAmount(uint256 inputAmount, uint256 inputReserve, uint256 outputReserve) private pure returns (uint256) {
+    function getAmount(
+        uint256 inputAmount,
+        uint256 inputReserve,
+        uint256 outputReserve
+    ) private pure returns (uint256) {
         require(inputReserve > 0 && outputReserve > 0, "invalid reserves");
-        return (inputAmount * outputReserve) / (inputReserve + inputAmount);
+        uint256 inputAmountWithFee = inputAmount * 99;
+        uint256 numerator = inputAmountWithFee * outputReserve;
+        uint256 denominator = (inputReserve * 100) + inputAmountWithFee;
+        return numerator / denominator;
     }
 
     function getTokenAmount(uint256 _ethSold) public view returns (uint256) {

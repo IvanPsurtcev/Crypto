@@ -6,9 +6,13 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 contract Exchange is ERC20 {
     address public tokenAddress;
+
+    address public factoryAddress;
+
     constructor(address _token) ERC20("i23swap-V1", "i23") {
         require(_token != address(0), "Incorrect token address");
         tokenAddress = _token;
+        factoryAddress = msg.sender;
     }
 
     function addLiquidity(uint256 _tokenAmount) public payable returns (uint256) {
@@ -77,10 +81,14 @@ contract Exchange is ERC20 {
     }
 
     function ethToTokenSwap(uint256 _minTokens) public payable {
+        ethToToken(_minTokens, msg.sender);
+    }
+
+    function ethToToken(uint256 _minTokens, address recipient) private {
         uint256 tokenReserve = getReserve();
         uint256 tokenBought = getAmount(msg.value, address(this).balance - msg.value, tokenReserve);
         require(tokenBought >= _minTokens, "insufficient withdrawal");
-        IERC20(tokenAddress).transfer(msg.sender, tokenBought);
+        IERC20(tokenAddress).transfer(recipient, tokenBought);
     }
 
     function tokenToEthSwap(uint256 _tokenSold, uint256 _minEth) public {
@@ -89,5 +97,26 @@ contract Exchange is ERC20 {
         require(ethBought >= _minEth, "insufficient production");
         IERC20(tokenAddress).transferFrom(msg.sender, address(this), _tokenSold);
         payable(msg.sender).transfer(ethBought);
+    }
+
+    function tokenToTokenSwap(
+        uint256 _tokenSold,
+        uint256 _minTokensBought,
+        address _tokenAddress
+    ) public {
+        address exchangeAddress = IFactory(factoryAddress).getExchange(_tokenAddress);
+
+        require(exchangeAddress != address(this) && exchangeAddress != address(0), "This exchange doesn't exist");
+
+        interface IFactory {
+            function getExchange(address _tokenAddress) external returns (address);
+        }
+
+        uint256 tokenReserve = getReserve();
+        uint256 ethBought = getAmount(_tokenSold, tokenReserve, address(this).balance);
+
+        IERC20(tokenAddress).transferFrom(msg.sender, address(this), _tokenSold);
+
+        IExchange(exchangeAddress).ethToTokenSwap{ value: ethBought }(_minTokensBought);
     }
 }

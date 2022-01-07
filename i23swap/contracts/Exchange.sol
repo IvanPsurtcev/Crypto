@@ -91,6 +91,10 @@ contract Exchange is ERC20 {
         IERC20(tokenAddress).transfer(recipient, tokenBought);
     }
 
+    function ethToTokenTransfer(uint256 _minTokens, address _recipient) public payable {
+        ethToToken(_minTokens,_recipient);
+    }
+
     function tokenToEthSwap(uint256 _tokenSold, uint256 _minEth) public {
         uint256 tokenReserve = getReserve();
         uint256 ethBought = getAmount(_tokenSold, tokenReserve, address(this).balance);
@@ -117,6 +121,7 @@ contract Exchange is ERC20 {
 
         IERC20(tokenAddress).transferFrom(msg.sender, address(this), _tokenSold);
 
-        IExchange(exchangeAddress).ethToTokenSwap{ value: ethBought }(_minTokensBought);
+        IExchange(exchangeAddress).ethToTokenTransfer{ value: ethBought }(_minTokensBought, msg.sender);
+
     }
 }

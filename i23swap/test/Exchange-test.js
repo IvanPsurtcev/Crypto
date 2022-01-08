@@ -47,9 +47,41 @@ describe("Exchange", () => {
                await exchange.addLiquidity(toWei(200), { value: toWei(100) });
 
                expect(await exchange.balanceOf(owner.address)).to.equal(toWei(100));
-               expect(await exchange.totalSupply()).to.eq(toWei(100));
+               expect(await exchange.totalSupply()).to.equal(toWei(100));
             });
 
+            it("allows zero amounts", async () => {
+               await token.approve(exchange.address, 0);
+               await exchange.addLiquidity(0, { value: 0 });
+
+               expect(await getBalance(exchange.address)).to.equal(0);
+               expect(await exchange.getReserve()).to.equal(0)
+            });
+        });
+
+        describe("existing reserves", async () => {
+            beforeEach(async () => {
+                await token.approve(exchange.address, toWei(300));
+                await exchange.addLiquidity(toWei(200), { value: toWei(100) });
+            });
+
+            it("preserves exchange rate", async () => {
+               await exchange.addLiquidity(toWei(200), { value: toWei(50) });
+               expect(await getBalance(exchange.address)).to.equal(toWei(150));
+               expect(await exchange.getReserve()).to.equal(toWei(300));
+            });
+
+            it("mints LP tokens", async () => {
+                await exchange.addLiquidity(toWei(200), { value: toWei(50) });
+                expect(await exchange.balanceOf(owner.address)).to.equal(toWei(150));
+                expect(await exchange.totalSupply()).to.equal(toWei(150));
+            });
+
+            it("fails when not enough tokens", async () => {
+               await expect(
+                   exchange.addLiquidity(toWei(50), { value: toWei(50) })
+               ).to.be.revertedWith("insufficient token amount");
+            });
         });
     });
 

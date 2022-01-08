@@ -9,6 +9,8 @@ const fromWei = (value) =>
         typeof value === "string" ? value : value.toString()
     );
 
+const getBalance = ethers.provider.getBalance;
+
 describe("Exchange", () => {
     let owner, user, exchange;
 
@@ -26,15 +28,28 @@ describe("Exchange", () => {
 
     it("is deployed", async () => {
         expect(await exchange.deployed()).to.equal(exchange);
+        expect(await exchange.name()).to.equal("i23swap");
+        expect(await exchange.symbol()).to.equal("I23");
+        expect(await exchange.totalSupply()).to.equal(toWei(0));
     });
 
     describe("addLiquidity", async () => {
-        it("adds liquidity", async () => {
-            await token.approve(exchange.address, toWei(200));
-            await exchange.addLiquidity(toWei(200), { value: toWei(100) });
-            const provider = waffle.provider;
-            expect(await provider.getBalance(exchange.address)).to.equal(toWei(100));
-            expect(await exchange.getReserve()).to.equal(toWei(200));
+        describe("empty reserves", async () => {
+            it("adds liquidity", async () => {
+                await token.approve(exchange.address, toWei(200));
+                await exchange.addLiquidity(toWei(200), { value: toWei(100) });
+                expect(await getBalance(exchange.address)).to.equal(toWei(100));
+                expect(await exchange.getReserve()).to.equal(toWei(200));
+            });
+
+            it("mints LP tokens", async () => {
+               await token.approve(exchange.address, toWei(200));
+               await exchange.addLiquidity(toWei(200), { value: toWei(100) });
+
+               expect(await exchange.balanceOf(owner.address)).to.equal(toWei(100));
+               expect(await exchange.totalSupply()).to.eq(toWei(100));
+            });
+
         });
     });
 

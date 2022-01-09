@@ -106,11 +106,31 @@ describe("Exchange", () => {
 
            await expect(
               fromWei(userEtherBalanceAfter.sub(userEtherBalanceBefore))
-           ).to.equal("24.999919985065490888");
+           ).to.equal("24.99993538295801692");
 
            await expect(
               fromWei(userTokenBalanceAfter.sub(userTokenBalanceBefore))
            ).to.equal("50.0");
+       });
+
+       it("removes all liquidity", async () => {
+           const userEtherBalanceBefore = await getBalance(owner.address);
+           const userTokenBalancebefore = await token.balanceOf(owner.address);
+
+           await exchange.removeLiquidity(toWei(100));
+           expect(await exchange.getReserve()).to.equal(toWei(0));
+           expect(await getBalance(exchange.address)).to.equal(toWei(0));
+
+           const userEtherBalanceAfter = await getBalance(owner.address);
+           const userTokenBalanceAfter = await token.balanceOf(owner.address);
+
+           expect(
+               fromWei(userEtherBalanceAfter.sub(userEtherBalanceBefore))
+           ).to.equal("99.999948650196184684");
+
+           expect(
+               fromWei(userTokenBalanceAfter.sub(userTokenBalanceBefore))
+           ).to.equal("200.0");
        });
     });
 

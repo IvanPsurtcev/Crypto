@@ -115,7 +115,7 @@ describe("Exchange", () => {
 
        it("removes all liquidity", async () => {
            const userEtherBalanceBefore = await getBalance(owner.address);
-           const userTokenBalancebefore = await token.balanceOf(owner.address);
+           const userTokenBalanceBefore = await token.balanceOf(owner.address);
 
            await exchange.removeLiquidity(toWei(100));
            expect(await exchange.getReserve()).to.equal(toWei(0));
@@ -131,6 +131,37 @@ describe("Exchange", () => {
            expect(
                fromWei(userTokenBalanceAfter.sub(userTokenBalanceBefore))
            ).to.equal("200.0");
+       });
+
+       it("pays for provided liquidity", async () => {
+          const userEtherBalanceBefore = await getBalance(owner.address);
+          const userTokenBalanceBefore = await token.balanceOf(owner.address);
+
+          await exchange.connect(user).ethToTokenSwap(toWei(18), { value: toWei(10) });
+          await exchange.removeLiquidity(toWei(100));
+
+          expect(await exchange.getReserve()).to.equal(toWei(0));
+          expect(await getBalance(exchange.address)).to.equal(toWei(0));
+          expect(fromWei(await token.balanceOf(user.address))).to.equal("18.01637852593266606");
+
+          const userEtherBalanceAfter = await getBalance(owner.address);
+          const userTokenBalanceAfter = await token.balanceOf(owner.address);
+
+          expect(fromWei(userEtherBalanceAfter.sub(userEtherBalanceBefore))).to.equal("109.999948860155388996");
+          expect(fromWei(userTokenBalanceAfter.sub(userTokenBalanceBefore))).to.equal("181.98362147406733394");
+       });
+
+       it("burns LP-tokens", async () => {
+            await expect(() => exchange.removeLiquidity(toWei(25))
+            ).to.changeTokenBalance(exchange, owner, toWei(-25));
+
+            expect(await exchange.totalSupply()).to.equal(toWei(75));
+       });
+
+       it("doesn't allow invalid amount", async () => {
+          await expect(exchange.removeLiquidity(toWei(100.1))).to.be.revertedWith(
+            "burn amount exceeds balance"
+          );
        });
     });
 

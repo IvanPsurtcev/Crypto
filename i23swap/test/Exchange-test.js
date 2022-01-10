@@ -165,31 +165,17 @@ describe("Exchange", () => {
        });
     });
 
-    describe("getPrice", async () => {
-       it("return correct price", async () => {
-          await token.approve(exchange.address, toWei(2000));
-          await exchange.addLiquidity(toWei(2000), { value: toWei(1000) });
-          const tokenReserve = await exchange.getReserve();
-          const provider = waffle.provider;
-          const etherReserve = await provider.getBalance(exchange.address);
-          // ETH-token
-          expect(await exchange.getPrice(etherReserve, tokenReserve)).to.eq(500);
-          // token-ETH
-          expect(await exchange.getPrice(tokenReserve, etherReserve)).to.eq(2000);
-       });
-    });
-
     describe("getTokenAmount", async () => {
        it("return correct token amount", async () => {
            await token.approve(exchange.address, toWei(2000));
            await exchange.addLiquidity(toWei(2000), { value: toWei(1000) });
 
            let tokensOut = await exchange.getTokenAmount(toWei(1));
-           expect(fromWei(tokensOut)).to.equal("1.998001998001998001");
+           expect(fromWei(tokensOut)).to.equal("1.978041738678708079");
            tokensOut = await exchange.getTokenAmount(toWei(100));
-           expect(fromWei(tokensOut)).to.equal("181.818181818181818181");
+           expect(fromWei(tokensOut)).to.equal("180.1637852593266606");
            tokensOut = await exchange.getTokenAmount(toWei(1000));
-           expect(fromWei(tokensOut)).to.equal("1000.0");
+           expect(fromWei(tokensOut)).to.equal("994.974874371859296482");
         });
     });
 
@@ -199,11 +185,67 @@ describe("Exchange", () => {
            await exchange.addLiquidity(toWei(2000), { value: toWei(1000) });
 
            let ethOut = await exchange.getEthAmount(toWei(2));
-           expect(fromWei(ethOut)).to.equal("0.999000999000999");
+           expect(fromWei(ethOut)).to.equal("0.989020869339354039");
            ethOut = await exchange.getEthAmount(toWei(100));
-           expect(fromWei(ethOut)).to.equal("47.619047619047619047");
+           expect(fromWei(ethOut)).to.equal("47.16531681753215817");
            ethOut = await exchange.getEthAmount(toWei(2000));
-           expect(fromWei(ethOut)).to.equal("500.0");
+           expect(fromWei(ethOut)).to.equal("497.487437185929648241");
        });
+    });
+
+    describe("ethToTokenSwap", async () => {
+        beforeEach(async () => {
+           await token.approve(exchange.address, toWei(2000));
+           await exchange.addLiquidity(toWei(2000), { value: toWei(1000) });
+        });
+
+        it("transfers at least min amount of tokens", async () => {
+
+            const userBalanceBefore = await getBalance(user.address);
+
+            await exchange.connect(user).ethToTokenSwap(toWei(1.97), { value: toWei(1) });
+            const userBalanceAfter = await getBalance(user.address);
+            expect(fromWei(userBalanceAfter.sub(userBalanceBefore))
+            ).to.equal("-1.000061400456116304");
+
+            const userTokenBalance = await token.balanceOf(user.address);
+            expect(fromWei(userTokenBalance)).to.equal("1.978041738678708079");
+
+            const exchangeEthBalance = await getBalance(exchange.address);
+            expect(fromWei(exchangeEthBalance)).to.equal("1001.0");
+
+            const exchangeTokenBalance = await token.balanceOf(exchange.address);
+            expect(fromWei(exchangeTokenBalance)).to.equal("1998.021958261321291921");
+        });
+
+        it("affects exchange rate", async () => {
+            let tokensOut = await exchange.getTokenAmount(toWei(10));
+            expect(fromWei(tokensOut)).to.equal("19.605901574413308248");
+
+            await exchange.connect(user).ethToTokenSwap(toWei(9), { value: toWei(10) });
+            tokensOut = await exchange.getTokenAmount(toWei(10));
+            expect(fromWei(tokensOut)).to.equal("19.223356774598792281");
+        });
+
+        it("fails when output amount is less than min amount", async () => {
+            await expect(
+                exchange.connect(user).ethToTokenSwap(toWei(2), { value: toWei(1) })
+            ).to.be.revertedWith("insufficient output amount");
+        });
+
+        it("allows zero swaps", async () => {
+            await exchange
+                .connect(user)
+                .ethToTokenSwap(toWei(0), { value: toWei(0) });
+
+            const userTokenBalance = await token.balanceOf(user.address);
+            expect(fromWei(userTokenBalance)).to.equal("0.0");
+
+            const exchangeEthBalance = await getBalance(exchange.address);
+            expect(fromWei(exchangeEthBalance)).to.equal("1000.0");
+
+            const exchangeTokenBalance = await token.balanceOf(exchange.address);
+            expect(fromWei(exchangeTokenBalance)).to.equal("2000.0");
+        });
     });
 });

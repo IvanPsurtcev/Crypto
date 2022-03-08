@@ -39,3 +39,17 @@ contract TestMultiDelegatecall is MultiDelegatecall {
         balanceOf[msg.sender] += msg.value;
     }
 }
+
+contract Helper {
+    function getFunc1Data(uint x, uint y) external pure returns (bytes memory) {
+        return abi.encodeWithSelector(TestMultiDelegatecall.func1.selector, x, y);
+    }
+
+    function getFunc2Data() external pure returns (bytes memory) {
+        return abi.encodeWithSelector(TestMultiDelegatecall.func2.selector);
+    }
+
+    function getMintData() external pure returns (bytes memory) {
+        return abi.encodeWithSelector(TestMultiDelegatecall.mint.selector);
+    }
+}

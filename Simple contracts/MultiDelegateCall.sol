@@ -35,6 +35,8 @@ contract TestMultiDelegatecall is MultiDelegatecall {
 
     mapping(address => uint) public balanceOf;
 
+    // WARNING: unsafe code when used in combination with multi-delegatecall
+    // user can mint multiple times for the price of msg.value
     function mint() external payable {
         balanceOf[msg.sender] += msg.value;
     }
